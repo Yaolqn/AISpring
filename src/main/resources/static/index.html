@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美食探索 - 餐厅推荐系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 头部样式 */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* 搜索栏样式 */
+        .search-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 14px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-select {
+            padding: 14px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .location-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 30px;
+        }
+
+        @media (max-width: 1100px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 餐厅卡片网格 */
+        .restaurants-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .restaurants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .restaurant-card {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 1px solid #f0f0f0;
+        }
+
+        .restaurant-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .card-image {
+            height: 160px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .card-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .card-rating {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #ff9500;
+            font-weight: 600;
+        }
+
+        .card-address {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* AI 助手侧边栏 */
+        .ai-sidebar {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 700px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .ai-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .ai-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+        }
+
+        .ai-header p {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-ai {
+            align-self: flex-start;
+            background: #f5f5f5;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .ai-input-area {
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .ai-input-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ai-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 14px;
+            resize: none;
+        }
+
+        .ai-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-send {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-send:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 详情弹窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .detail-row {
+            margin-bottom: 20px;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            color: #333;
+        }
+
+        .rating-big {
+            font-size: 2rem;
+            color: #ff9500;
+            font-weight: 700;
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🍽️ 美食探索</h1>
+            <p>发现身边的优质餐厅，AI智能推荐</p>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索餐厅名称...">
+                <select class="filter-select" id="typeFilter">
+                    <option value="">所有类型</option>
+                    <option value="火锅">火锅</option>
+                    <option value="日料">日料</option>
+                    <option value="中餐">中餐</option>
+                    <option value="川菜">川菜</option>
+                    <option value="粤菜">粤菜</option>
+                    <option value="西餐">西餐</option>
+                    <option value="快餐">快餐</option>
+                    <option value="韩餐">韩餐</option>
+                    <option value="咖啡">咖啡</option>
+                    <option value="饮品">饮品</option>
+                </select>
+                <button class="btn btn-primary" onclick="searchRestaurants()">🔍 搜索</button>
+                <button class="btn btn-secondary" onclick="loadRecommended()">⭐ 推荐</button>
+                <button class="btn btn-secondary" onclick="loadAllRestaurants()">📋 全部</button>
+                <button class="btn btn-secondary" onclick="sortByDistance()">📍 按距离排序</button>
+            </div>
+            <div class="location-info" id="locationInfo">
+                📍 正在获取您的位置...
+            </div>
+            <div class="location-inputs" style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="manualLat" placeholder="纬度" step="0.0001" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 120px;">
+                <input type="number" id="manualLng" placeholder="经度" step="0.0001" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 120px;">
+                <button class="btn btn-secondary" onclick="setManualLocation()" style="padding: 8px 16px;">设置位置</button>
+                <button class="btn btn-secondary" onclick="useDefaultLocation()" style="padding: 8px 16px;">使用广州番禺</button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 餐厅列表 -->
+            <div class="restaurants-section">
+                <h2 class="section-title">
+                    <span id="listTitle">⭐ 推荐餐厅</span>
+                </h2>
+                <div class="restaurants-grid" id="restaurantsGrid">
+                    <div class="loading"></div>
+                </div>
+            </div>
+
+            <!-- AI 助手 -->
+            <div class="ai-sidebar">
+                <div class="ai-header">
+                    <h3>🤖 AI美食助手</h3>
+                    <p>告诉我你想吃什么，我帮你找</p>
+                </div>
+                <div class="ai-messages" id="aiMessages">
+                    <div class="message message-ai">
+                        你好！我是你的AI美食助手 🍜<br><br>
+                        你可以问我：<br>
+                        • "附近有什么好吃的火锅？"<br>
+                        • "推荐几家高评分餐厅"<br>
+                        • "搜索海底捞"<br>
+                        • "离我最近的日料店"
+                    </div>
+                </div>
+                <div class="ai-input-area">
+                    <div class="ai-input-box">
+                        <textarea class="ai-input" id="aiInput" rows="2" placeholder="输入你的问题..."></textarea>
+                        <button class="btn-send" id="sendBtn" onclick="sendMessage()">发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+                <h2 id="modalTitle">餐厅详情</h2>
+                <span id="modalType" class="card-type" style="margin-top: 10px;">类型</span>
+            </div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <div class="detail-label">评分</div>
+                    <div class="detail-value rating-big" id="modalRating">4.5 ⭐</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">地址</div>
+                    <div class="detail-value" id="modalAddress">地址信息</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">坐标位置</div>
+                    <div class="detail-value" id="modalCoords">纬度: 39.9, 经度: 116.4</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">简介</div>
+                    <div class="detail-value" id="modalDescription">餐厅描述...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API 基础地址
+        const API_BASE = '/api';
+        
+        // 用户位置
+        let userLocation = null;
+        
+        // 当前餐厅数据
+        let currentRestaurants = [];
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            getUserLocation();
+            loadRecommended();
+            
+            // 绑定回车事件
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') searchRestaurants();
+            });
+            
+            document.getElementById('aiInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        });
+
+        // 获取用户位置
+        function getUserLocation() {
+            const locationInfo = document.getElementById('locationInfo');
+            
+            // 默认使用广州番禺位置
+            userLocation = { lat: 23.0458, lng: 113.3826 };
+            locationInfo.innerHTML = `📍 默认位置（广州番禺）：纬度 ${userLocation.lat}, 经度 ${userLocation.lng}`;
+            
+            // 尝试获取浏览器定位（仅作参考）
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const browserLat = position.coords.latitude;
+                        const browserLng = position.coords.longitude;
+                        locationInfo.innerHTML += `<br><small style="color:#666;">浏览器定位：纬度 ${browserLat.toFixed(4)}, 经度 ${browserLng.toFixed(4)}（可能不准确）</small>`;
+                    },
+                    function(error) {
+                        console.log('浏览器定位失败，使用默认位置');
+                    }
+                );
+            }
+        }
+
+        // 手动设置位置
+        function setManualLocation() {
+            const lat = parseFloat(document.getElementById('manualLat').value);
+            const lng = parseFloat(document.getElementById('manualLng').value);
+            
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('请输入有效的经纬度');
+                return;
+            }
+            
+            userLocation = { lat, lng };
+            document.getElementById('locationInfo').innerHTML = `📍 手动设置位置：纬度 ${lat}, 经度 ${lng}`;
+        }
+
+        // 使用广州番禺默认位置
+        function useDefaultLocation() {
+            userLocation = { lat: 23.0458, lng: 113.3826 };
+            document.getElementById('manualLat').value = '23.0458';
+            document.getElementById('manualLng').value = '113.3826';
+            document.getElementById('locationInfo').innerHTML = `📍 使用默认位置（广州番禺）：纬度 ${userLocation.lat}, 经度 ${userLocation.lng}`;
+        }
+
+        // 按距离排序餐厅
+        function sortByDistance() {
+            if (!userLocation) {
+                alert('请先设置您的位置');
+                return;
+            }
+            
+            if (currentRestaurants.length === 0) {
+                alert('暂无餐厅数据');
+                return;
+            }
+            
+            // 计算每个餐厅与用户的距离
+            const restaurantsWithDistance = currentRestaurants.map(r => {
+                const distance = calculateDistance(userLocation.lat, userLocation.lng, r.latitude, r.longitude);
+                return { ...r, distance };
+            });
+            
+            // 按距离排序
+            restaurantsWithDistance.sort((a, b) => a.distance - b.distance);
+            
+            // 更新当前餐厅列表
+            currentRestaurants = restaurantsWithDistance;
+            
+            // 更新标题并重新渲染
+            document.getElementById('listTitle').textContent = '📍 按距离排序（最近优先）';
+            renderRestaurantsWithDistance(currentRestaurants);
+        }
+
+        // 计算两点之间的距离（Haversine公式，单位：公里）
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // 地球半径（公里）
+            const dLat = toRadians(lat2 - lat1);
+            const dLng = toRadians(lng2 - lng1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function toRadians(degrees) {
+            return degrees * (Math.PI / 180);
+        }
+
+        // 渲染餐厅列表（带距离信息）
+        function renderRestaurantsWithDistance(restaurants) {
+            const grid = document.getElementById('restaurantsGrid');
+            
+            if (restaurants.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-state-icon">🍽️</div>
+                        <p>没有找到符合条件的餐厅</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = restaurants.map(r => `
+                <div class="restaurant-card" onclick="showDetail(${r.id})">
+                    <div class="card-image">
+                        ${getEmojiForType(r.type)}
+                    </div>
+                    <div class="card-content">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">${r.name}</div>
+                                <span class="card-type">${r.type}</span>
+                            </div>
+                            <div class="card-rating">
+                                <span>⭐</span>
+                                <span>${r.rating.toFixed(1)}</span>
+                            </div>
+                        </div>
+                        <div class="card-address">
+                            📍 ${r.address}
+                        </div>
+                        <div class="card-distance" style="margin-top: 8px; color: #667eea; font-weight: 600; font-size: 14px;">
+                            🚶 距离您 ${r.distance.toFixed(2)} 公里
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 加载推荐餐厅
+        async function loadRecommended() {
+            document.getElementById('listTitle').textContent = '⭐ 推荐餐厅（按评分）';
+            showLoading();
+            
+            try {
+                const response = await axios.get(`${API_BASE}/restaurants/recommended?limit=12`);
+                currentRestaurants = response.data;
+                renderRestaurants(currentRestaurants);
+            } catch (error) {
+                showError('加载推荐餐厅失败');
+            }
+        }
+
+        // 加载所有餐厅
+        async function loadAllRestaurants() {
+            document.getElementById('listTitle').textContent = '📋 所有餐厅';
+            showLoading();
+            
+            try {
+                const response = await axios.get(`${API_BASE}/restaurants`);
+                currentRestaurants = response.data;
+                renderRestaurants(currentRestaurants);
+            } catch (error) {
+                showError('加载餐厅失败');
+            }
+        }
+
+        // 搜索餐厅
+        async function searchRestaurants() {
+            const name = document.getElementById('searchInput').value.trim();
+            const type = document.getElementById('typeFilter').value;
+            
+            if (!name && !type) {
+                loadAllRestaurants();
+                return;
+            }
+            
+            document.getElementById('listTitle').textContent = `🔍 搜索结果`;
+            showLoading();
+            
+            try {
+                const response = await axios.get(`${API_BASE}/restaurants/search/combined`, {
+                    params: { name, type }
+                });
+                currentRestaurants = response.data;
+                renderRestaurants(currentRestaurants);
+            } catch (error) {
+                showError('搜索失败');
+            }
+        }
+
+        // 渲染餐厅列表
+        function renderRestaurants(restaurants) {
+            const grid = document.getElementById('restaurantsGrid');
+            
+            if (restaurants.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-state-icon">🍽️</div>
+                        <p>没有找到符合条件的餐厅</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = restaurants.map(r => `
+                <div class="restaurant-card" onclick="showDetail(${r.id})">
+                    <div class="card-image">
+                        ${getEmojiForType(r.type)}
+                    </div>
+                    <div class="card-content">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">${r.name}</div>
+                                <span class="card-type">${r.type}</span>
+                            </div>
+                            <div class="card-rating">
+                                <span>⭐</span>
+                                <span>${r.rating.toFixed(1)}</span>
+                            </div>
+                        </div>
+                        <div class="card-address">
+                            📍 ${r.address}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 根据类型获取emoji
+        function getEmojiForType(type) {
+            const emojiMap = {
+                '火锅': '🍲',
+                '日料': '🍣',
+                '中餐': '🥢',
+                '川菜': '🌶️',
+                '粤菜': '🥟',
+                '西餐': '🍝',
+                '快餐': '🍔',
+                '韩餐': '🍜',
+                '咖啡': '☕',
+                '饮品': '🧋'
+            };
+            return emojiMap[type] || '🍽️';
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            document.getElementById('restaurantsGrid').innerHTML = '<div class="loading" style="grid-column: 1/-1; margin: 50px auto;"></div>';
+        }
+
+        // 显示错误
+        function showError(msg) {
+            document.getElementById('restaurantsGrid').innerHTML = `
+                <div class="empty-state" style="grid-column: 1/-1;">
+                    <div class="empty-state-icon">😔</div>
+                    <p>${msg}</p>
+                </div>
+            `;
+        }
+
+        // 显示详情弹窗
+        function showDetail(id) {
+            const restaurant = currentRestaurants.find(r => r.id === id);
+            if (!restaurant) return;
+            
+            document.getElementById('modalTitle').textContent = restaurant.name;
+            document.getElementById('modalType').textContent = restaurant.type;
+            document.getElementById('modalRating').textContent = restaurant.rating.toFixed(1) + ' ⭐';
+            document.getElementById('modalAddress').textContent = restaurant.address;
+            document.getElementById('modalCoords').textContent = `纬度: ${restaurant.latitude.toFixed(6)}, 经度: ${restaurant.longitude.toFixed(6)}`;
+            document.getElementById('modalDescription').textContent = restaurant.description || '暂无描述';
+            
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        // 点击遮罩关闭弹窗
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // 发送AI消息
+        async function sendMessage() {
+            const input = document.getElementById('aiInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // 添加用户消息到界面
+            addMessage(message, 'user');
+            input.value = '';
+            
+            // 禁用发送按钮
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '...';
+            
+            try {
+                const response = await axios.post(`${API_BASE}/ai/chat`, {
+                    message: message,
+                    latitude: userLocation?.lat,
+                    longitude: userLocation?.lng
+                });
+                
+                addMessage(response.data.response, 'ai');
+            } catch (error) {
+                addMessage('抱歉，服务暂时不可用，请稍后重试。😔', 'ai');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送';
+            }
+        }
+
+        // 添加消息到聊天界面
+        function addMessage(text, sender) {
+            const messagesContainer = document.getElementById('aiMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${sender}`;
+            messageDiv.innerHTML = text.replace(/\n/g, '<br>');
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
