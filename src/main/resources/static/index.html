@@ -258,6 +258,33 @@
             margin-top: 5px;
         }
 
+        .ai-header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .session-info {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .btn-clear {
+            padding: 4px 10px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-clear:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
         .ai-messages {
             flex: 1;
             overflow-y: auto;
@@ -508,6 +535,10 @@
                 <div class="ai-header">
                     <h3>🤖 AI美食助手</h3>
                     <p>告诉我你想吃什么，我帮你找</p>
+                    <div class="ai-header-actions">
+                        <span class="session-info" id="sessionInfo">会话: 新会话</span>
+                        <button class="btn-clear" onclick="clearChatHistory()">🗑️ 清空对话</button>
+                    </div>
                 </div>
                 <div class="ai-messages" id="aiMessages">
                     <div class="message message-ai">
@@ -561,12 +592,15 @@
     <script>
         // API 基础地址
         const API_BASE = '/api';
-        
+
         // 用户位置
         let userLocation = null;
-        
+
         // 当前餐厅数据
         let currentRestaurants = [];
+
+        // 会话ID（用于保持对话上下文）
+        let sessionId = null;
 
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -889,11 +923,19 @@
                     body: JSON.stringify({
                         message: message,
                         latitude: userLocation?.lat,
-                        longitude: userLocation?.lng
+                        longitude: userLocation?.lng,
+                        sessionId: sessionId // 传递会话ID以保持上下文
                     })
                 });
 
                 const data = await response.json();
+
+                // 保存服务端返回的会话ID
+                if (data.sessionId) {
+                    sessionId = data.sessionId;
+                    updateSessionInfo();
+                }
+
                 addMessage(data.response, 'ai');
             } catch (error) {
                 addMessage('抱歉，服务暂时不可用，请稍后重试。😔', 'ai');
@@ -902,6 +944,169 @@
                 sendBtn.textContent = '发送';
             }
         }
+
+        // 更新会话信息显示
+        function updateSessionInfo() {
+            const sessionInfo = document.getElementById('sessionInfo');
+            if (sessionId) {
+                // 显示会话ID的前8位
+                const shortId = sessionId.substring(0, 8) + '...';
+                sessionInfo.textContent = `会话: ${shortId}`;
+            } else {
+                sessionInfo.textContent = '会话: 新会话';
+            }
+        }
+
+        // 清空对话历史
+        async function clearChatHistory() {
+            if (!sessionId) {
+                // 没有会话ID，直接清空界面
+                clearChatUI();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/ai/chat/clear`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // 清空界面
+                    clearChatUI();
+                    // 重置会话ID
+                    sessionId = null;
+                    updateSessionInfo();
+                } else {
+                    alert('清空对话失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('清空对话失败:', error);
+                alert('清空对话失败，请稍后重试');
+            }
+        }
+
+        // 清空聊天界面
+        function clearChatUI() {
+            const messagesContainer = document.getElementById('aiMessages');
+            messagesContainer.innerHTML = `
+                <div class="message message-ai">
+                    对话已清空！我是你的AI美食助手 🍜<br><br>
+                    你可以问我：<br>
+                    • "附近有什么好吃的火锅？"<br>
+                    • "推荐几家高评分餐厅"<br>
+                    • "搜索海底捞"<br>
+                    • "离我最近的日料店"
+                </div>
+            `;
+        }
+
+        // // 发送AI消息（流式模式）
+        // async function sendMessage() {
+        //     const input = document.getElementById('aiInput');
+        //     const message = input.value.trim();
+        //
+        //     if (!message) return;
+        //
+        //     // 添加用户消息到界面
+        //     addMessage(message, 'user');
+        //     input.value = '';
+        //
+        //     // 禁用发送按钮
+        //     const sendBtn = document.getElementById('sendBtn');
+        //     sendBtn.disabled = true;
+        //     sendBtn.textContent = '思考中...';
+        //
+        //     // 提前在界面上创建一个空的 AI 消息气泡，用来接收流式文字
+        //     const messagesContainer = document.getElementById('aiMessages');
+        //     const aiMessageDiv = document.createElement('div');
+        //     aiMessageDiv.className = 'message message-ai';
+        //     messagesContainer.appendChild(aiMessageDiv);
+        //
+        //     // 记录AI完整回复的变量
+        //     let fullAiResponse = "";
+        //
+        //     try {
+        //         // 注意：这里需要调用你后端对应的 流式接口 路径
+        //         // 假设你的后端接口是 /ai/chat/stream
+        //         const response = await fetch(`${API_BASE}/ai/chat/stream`, {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/json',
+        //                 // 告诉后端接收文本流 (根据你后端的实际配置，通常不需要强制指定，但推荐加上)
+        //                 'Accept': 'text/event-stream'
+        //             },
+        //             body: JSON.stringify({
+        //                 message: message,
+        //                 latitude: userLocation?.lat,
+        //                 longitude: userLocation?.lng
+        //             })
+        //         });
+        //
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP error! status: ${response.status}`);
+        //         }
+        //
+        //         sendBtn.textContent = '接收中...';
+        //
+        //         // 获取数据流读取器
+        //         const reader = response.body.getReader();
+        //         // 文本解码器：将流式返回的 Uint8Array 字节数组解码为字符串
+        //         const decoder = new TextDecoder('utf-8');
+        //
+        //         // 循环读取流数据
+        //         while (true) {
+        //             const { done, value } = await reader.read();
+        //
+        //             if (done) {
+        //                 break; // 数据流读取完毕
+        //             }
+        //
+        //             // 解码当前数据块
+        //             let chunk = decoder.decode(value, { stream: true });
+        //
+        //             // 【兼容处理】如果后端使用的是 Server-Sent Events (SSE)，返回的格式可能是 "data: 文本\n\n"
+        //             // 如果后端直接返回 Flux<String> raw text，则可以直接拼接
+        //             // 下面这行代码是为了兼容 SSE 格式，去掉 "data: " 前缀
+        //             chunk = chunk.replace(/^data: /gm, '').replace(/\n\n$/g, '');
+        //
+        //             // 将新文本拼接到完整回复中
+        //             fullAiResponse += chunk;
+        //
+        //             // 实时更新 AI 的消息气泡，并处理换行
+        //             aiMessageDiv.innerHTML = fullAiResponse.replace(/\n/g, '<br>');
+        //
+        //             // 自动滚动到底部
+        //             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        //         }
+        //
+        //     } catch (error) {
+        //         console.error("Chat error:", error);
+        //         // 如果发生错误，覆盖气泡内容
+        //         aiMessageDiv.innerHTML = '抱歉，服务暂时不可用，请稍后重试。😔';
+        //     } finally {
+        //         // 恢复发送按钮状态
+        //         sendBtn.disabled = false;
+        //         sendBtn.textContent = '发送';
+        //     }
+        // }
+        //
+        // // 现有的 addMessage 保留，用于添加用户消息或简单的单次提示
+        // function addMessage(text, sender) {
+        //     const messagesContainer = document.getElementById('aiMessages');
+        //     const messageDiv = document.createElement('div');
+        //     messageDiv.className = `message message-${sender}`;
+        //     messageDiv.innerHTML = text.replace(/\n/g, '<br>');
+        //     messagesContainer.appendChild(messageDiv);
+        //     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // }
 
         // 添加消息到聊天界面
         function addMessage(text, sender) {
