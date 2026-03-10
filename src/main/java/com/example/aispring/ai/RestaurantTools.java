@@ -33,12 +33,17 @@ public class RestaurantTools {
      * @return 餐厅搜索结果
      */
     public String findNearbyRestaurants(FindNearbyRequest request) {
-        
+
         log.info("AI调用 findNearbyRestaurants: latitude={}, longitude={}, radiusKm={}, type={}, sortBy={}, limit={}",
-                request.latitude(), request.longitude(), request.radiusKm(), 
+                request.latitude(), request.longitude(), request.radiusKm(),
                 request.type(), request.sortBy(), request.limit());
 
         try {
+            // 参数校验 - 必需参数检查
+            if (request.latitude() == null || request.longitude() == null) {
+                return "无法获取您的位置信息，请提供有效的经纬度坐标。";
+            }
+
             // 参数校验和默认值
             double radius = request.radiusKm() != null ? request.radiusKm() : 5.0;
             int limit = request.limit() != null ? request.limit() : 10;
@@ -224,12 +229,10 @@ public class RestaurantTools {
     @JsonClassDescription("搜索附近餐厅的请求参数")
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record FindNearbyRequest(
-            @JsonProperty(required = true)
-            @JsonPropertyDescription("用户当前位置的纬度，例如：39.9042（北京天安门）")
+            @JsonPropertyDescription("用户当前位置的纬度，例如：39.9042（北京天安门），必需参数")
             Double latitude,
 
-            @JsonProperty(required = true)
-            @JsonPropertyDescription("用户当前位置的经度，例如：116.4074（北京天安门）")
+            @JsonPropertyDescription("用户当前位置的经度，例如：116.4074（北京天安门），必需参数")
             Double longitude,
 
             @JsonPropertyDescription("搜索半径（公里），默认5公里")

@@ -15,7 +15,6 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * AI 聊天服务
@@ -83,28 +82,31 @@ public class AiChatService {
             // 构建Prompt并调用AI
             Prompt prompt = new Prompt(messages);
 
-            // 创建Function Callbacks
+            // 创建Function Callbacks (FunctionCallbackWrapper 在M5中仍可用，只是标记为弃用)
+            @SuppressWarnings("deprecation")
             FunctionCallback findNearbyCallback = FunctionCallbackWrapper.builder(
                     (RestaurantTools.FindNearbyRequest request) -> restaurantTools.findNearbyRestaurants(request))
                     .withName("findNearbyRestaurants")
                     .withDescription("根据用户位置搜索附近的餐厅，支持按类型筛选和排序。参数：latitude(纬度), longitude(经度), radiusKm(半径), type(类型), sortBy(排序), limit(数量)")
                     .withInputType(RestaurantTools.FindNearbyRequest.class)
                     .build();
-            
+
+            @SuppressWarnings("deprecation")
             FunctionCallback searchCallback = FunctionCallbackWrapper.builder(
                     (RestaurantTools.SearchRequest request) -> restaurantTools.searchRestaurants(request))
                     .withName("searchRestaurants")
                     .withDescription("根据餐厅名称或类型搜索餐厅。参数：name(名称), type(类型), sortBy(排序), limit(数量)")
                     .withInputType(RestaurantTools.SearchRequest.class)
                     .build();
-            
+
+            @SuppressWarnings("deprecation")
             FunctionCallback recommendCallback = FunctionCallbackWrapper.builder(
                     (RestaurantTools.RecommendRequest request) -> restaurantTools.getRecommendedRestaurants(request))
                     .withName("getRecommendedRestaurants")
                     .withDescription("获取高评分推荐餐厅。参数：type(类型), limit(数量)")
                     .withInputType(RestaurantTools.RecommendRequest.class)
                     .build();
-            
+
             // 使用ChatClient进行Function Calling调用
             ChatResponse response = chatClient.prompt(prompt)
                     .functions(findNearbyCallback, searchCallback, recommendCallback)
@@ -123,6 +125,7 @@ public class AiChatService {
 
     /**
      * 发送消息并获取流式AI回复（用于打字机效果）
+     * 注意：流式模式暂不支持Function Calling，因Spring AI流式响应中Function参数可能为空
      *
      * @param userMessage 用户消息
      * @param latitude    用户纬度（可选）
@@ -136,43 +139,20 @@ public class AiChatService {
             // 构建消息列表
             List<Message> messages = new ArrayList<>();
             messages.add(new SystemMessage(SYSTEM_PROMPT));
-            
+
             // 如果有位置信息，添加到上下文
             String enhancedMessage = userMessage;
             if (latitude != null && longitude != null) {
-                enhancedMessage = String.format("%s\n[用户当前位置：纬度 %.6f, 经度 %.6f]", 
+                enhancedMessage = String.format("%s\n[用户当前位置：纬度 %.6f, 经度 %.6f]",
                         userMessage, latitude, longitude);
             }
             messages.add(new UserMessage(enhancedMessage));
 
             // 构建Prompt
             Prompt prompt = new Prompt(messages);
-            
-            // 创建Function Callbacks
-            FunctionCallback findNearbyCallback = FunctionCallbackWrapper.builder(
-                    (RestaurantTools.FindNearbyRequest request) -> restaurantTools.findNearbyRestaurants(request))
-                    .withName("findNearbyRestaurants")
-                    .withDescription("根据用户位置搜索附近的餐厅，支持按类型筛选和排序。参数：latitude(纬度), longitude(经度), radiusKm(半径), type(类型), sortBy(排序), limit(数量)")
-                    .withInputType(RestaurantTools.FindNearbyRequest.class)
-                    .build();
-            
-            FunctionCallback searchCallback = FunctionCallbackWrapper.builder(
-                    (RestaurantTools.SearchRequest request) -> restaurantTools.searchRestaurants(request))
-                    .withName("searchRestaurants")
-                    .withDescription("根据餐厅名称或类型搜索餐厅。参数：name(名称), type(类型), sortBy(排序), limit(数量)")
-                    .withInputType(RestaurantTools.SearchRequest.class)
-                    .build();
-            
-            FunctionCallback recommendCallback = FunctionCallbackWrapper.builder(
-                    (RestaurantTools.RecommendRequest request) -> restaurantTools.getRecommendedRestaurants(request))
-                    .withName("getRecommendedRestaurants")
-                    .withDescription("获取高评分推荐餐厅。参数：type(类型), limit(数量)")
-                    .withInputType(RestaurantTools.RecommendRequest.class)
-                    .build();
 
-            // 使用ChatClient进行流式调用
+            // 流式模式不使用Function Calling（避免空参数问题）
             return chatClient.prompt(prompt)
-                    .functions(findNearbyCallback, searchCallback, recommendCallback)
                     .stream()
                     .content();
 

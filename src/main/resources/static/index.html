@@ -864,30 +864,37 @@
             if (e.target === this) closeModal();
         });
 
-        // 发送AI消息
+        // 发送AI消息（同步模式）
         async function sendMessage() {
             const input = document.getElementById('aiInput');
             const message = input.value.trim();
-            
+
             if (!message) return;
-            
+
             // 添加用户消息到界面
             addMessage(message, 'user');
             input.value = '';
-            
+
             // 禁用发送按钮
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
             sendBtn.textContent = '...';
-            
+
             try {
-                const response = await axios.post(`${API_BASE}/ai/chat`, {
-                    message: message,
-                    latitude: userLocation?.lat,
-                    longitude: userLocation?.lng
+                const response = await fetch(`${API_BASE}/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        latitude: userLocation?.lat,
+                        longitude: userLocation?.lng
+                    })
                 });
-                
-                addMessage(response.data.response, 'ai');
+
+                const data = await response.json();
+                addMessage(data.response, 'ai');
             } catch (error) {
                 addMessage('抱歉，服务暂时不可用，请稍后重试。😔', 'ai');
             } finally {
